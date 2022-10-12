@@ -1,0 +1,9 @@
+
+Host *
+	User jonas.back@aalto.fi
+	CertificateFile "/home/jonas/git/multimedia/az_ssh_config/all_ips/id_rsa.pub-aadcert.pub"
+	IdentityFile "/home/jonas/git/multimedia/az_ssh_config/all_ips/id_rsa"
+Host *
+	User jonas.back@aalto.fi
+	CertificateFile "/home/jonas/git/multimedia/az_ssh_config/all_ips/id_rsa.pub-aadcert.pub"
+	IdentityFile "/home/jonas/git/multimedia/az_ssh_config/all_ips/id_rsa"
