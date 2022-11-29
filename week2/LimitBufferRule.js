@@ -29,104 +29,103 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  */
 
- var BitrateRule;
+var BitrateRule;
 
- function BitrateRuleClass() {
- 
-   let context = this.context;
-   let factory = dashjs.FactoryMaker;
-   let SwitchRequest = factory.getClassFactoryByName('SwitchRequest');
-   let MetricsModel = factory.getSingletonFactoryByName('MetricsModel')(context).getInstance();
-   let StreamController = factory.getSingletonFactoryByName('StreamController');
-   let instance;
- 
-   // Gets called when the rule is created
-   function setup() {
-       console.log('Rule Created');
-   }
- 
- 
- 
-   // This function gets called every time a segment is downloaded. Design your bitrate algorithm around that principle.
-   function getMaxIndex(rulesContext) {
-     // Constants. TOOD: Should probably be based on settings
-     const bufferLowerLimit = 7000;
-     const bufferUpperLimit = 8000;
-     
-     // Fetch metrics
-     const mediaType = rulesContext.getMediaType();
-     const metrics = MetricsModel.getMetricsFor(mediaType, true);
- 
-     // Get current bitrate
-     const streamController = StreamController(context).getInstance();
-     const abrController = rulesContext.getAbrController();
-     const currentQuality = abrController.getQualityFor(mediaType, streamController.getActiveStreamInfo().id);
-     const bitrateList = rulesContext.getMediaInfo()['bitrateList'];
-     const maxQuality = bitrateList.length - 1;
- 
-     // Get throughput history
-     const streamInfo = rulesContext.getStreamInfo();
-     const isDynamic = streamInfo && streamInfo.manifestInfo ? streamInfo.manifestInfo.isDynamic : null;
-     const throughputHistory = abrController.getThroughputHistory();
-     const throughputKbps = throughputHistory.getSafeAverageThroughput(mediaType, isDynamic);
-     const throughput = throughputKbps * 1000;
- 
+function BitrateRuleClass() {
+
+  let context = this.context;
+  let factory = dashjs.FactoryMaker;
+  let SwitchRequest = factory.getClassFactoryByName('SwitchRequest');
+  let MetricsModel = factory.getSingletonFactoryByName('MetricsModel')(context).getInstance();
+  let StreamController = factory.getSingletonFactoryByName('StreamController');
+  let instance;
+
+  // Gets called when the rule is created
+  function setup() {
+      console.log('Rule Created');
+  }
+
+
+
+  // This function gets called every time a segment is downloaded. Design your bitrate algorithm around that principle.
+  function getMaxIndex(rulesContext) {
+    // Constants. TOOD: Should probably be based on settings
+    const bufferLimit = 6000;
+    
+    // Fetch metrics
+    const mediaType = rulesContext.getMediaType();
+    const metrics = MetricsModel.getMetricsFor(mediaType, true);
+    // Get current bitrate
+    const streamController = StreamController(context).getInstance();
+    const abrController = rulesContext.getAbrController();
+    const currentQuality = abrController.getQualityFor(mediaType, streamController.getActiveStreamInfo().id);
+    const bitrateList = rulesContext.getMediaInfo()['bitrateList'];
+    const currentBitrate = bitrateList[currentQuality].bandwidth;
+    const maxQuality = bitrateList.length - 1;
+
+    // Get throughput history
+    const streamInfo = rulesContext.getStreamInfo();
+    const isDynamic = streamInfo && streamInfo.manifestInfo ? streamInfo.manifestInfo.isDynamic : null;
+    const throughputHistory = abrController.getThroughputHistory();
+    const throughputKbps = throughputHistory.getAverageThroughput(mediaType, isDynamic);
+    const throughput = throughputKbps * 1000;
+    const latency = throughputHistory.getAverageLatency(mediaType) / 1000;
+
     // Return the index of the highest bitrate that is still lower than the throughput
     // Useful when minimizing the number of switches
     function indexOfBestBitrate() {
-       let bestIndex = -1;
-       bitrateList.every(bitrate =>  {
-         if (bitrate.bandwidth > throughput) {
-           return false;
-         }
-         bestIndex += 1;
-         return true;
-       })
-       return Math.max(0, bestIndex);
-     }
+      let bestIndex = -1;
+      bitrateList.every(bitrate =>  {
+        if (bitrate.bandwidth >= throughput) {
+          return false;
+        }
+        bestIndex += 1;
+        return true;
+      })
+      return Math.max(0, bestIndex);
+    }
+
+    // Get buffer level from the timestamp of the last chunk
+    let bufferLevel = 0;
+    if (metrics['BufferLevel'].length > 0) {
+      bufferLevel = metrics['BufferLevel'][metrics['BufferLevel'].length - 1]['level'];
+    }
+    console.log('bufferLevel: ', bufferLevel)
+
+    let newQuality = indexOfBestBitrate();
+    let switchReason = "";
+    if (bufferLevel > bufferLimit && newQuality > 1) {
+      newQuality += 1;
+      switchReason = "Buffer high";
+    } else if (bufferLevel < bufferLimit) {
+      newQuality = 0;
+      switchReason = "Buffer low";
+    }
  
-     // Get buffer level from the timestamp of the last chunk
-     let bufferLevel = 0;
-     if (metrics['BufferLevel'].length > 0) {
-       bufferLevel = metrics['BufferLevel'][metrics['BufferLevel'].length - 1]['level'];
-     }
- 
-     let newQuality = indexOfBestBitrate();
-     let switchReason = "";
-     if (bufferLevel > bufferUpperLimit) {
-       newQuality = Math.min(maxQuality, indexOfBestBitrate() + 1);
-       switchReason = "Buffer high";
-     } else if (bufferLevel < bufferLowerLimit) {
-       newQuality = 0;
-       switchReason = "Buffer low";
-     }
-  
-     // If quality matches current bitrate, don't do anything
-     if (currentQuality == newQuality) {
-       console.log('Do nothing!');
-       return SwitchRequest(context).create();
-     }
- 
-     // Send quality switch request
-     console.log("Switching quality");
-     console.log('previous quality: ', currentQuality, '\nnew quality: ', newQuality);
-     let switchRequest = SwitchRequest(context).create();
-     switchRequest.quality = newQuality;
-     switchRequest.reason = switchReason;
-     switchRequest.priority = SwitchRequest.PRIORITY.STRONG;
-     return switchRequest;
-   }
- 
-   instance = {
-       getMaxIndex: getMaxIndex
-   };
- 
-   setup();
- 
-   return instance;
- }
- 
- BitrateRuleClass.__dashjs_factory_name = 'BitrateRule';
- BitrateRule = dashjs.FactoryMaker.getClassFactory(BitrateRuleClass);
- 
- 
+    // If quality matches current bitrate, don't do anything
+    if (currentQuality == newQuality) {
+      // console.log('Do nothing!');
+      return SwitchRequest(context).create();
+    }
+
+    // Send quality switch request
+    console.log("Switching quality");
+    console.log('previous quality: ', currentQuality, '\nnew quality: ', newQuality);
+    let switchRequest = SwitchRequest(context).create();
+    switchRequest.quality = newQuality;
+    switchRequest.reason = switchReason;
+    switchRequest.priority = SwitchRequest.PRIORITY.STRONG;
+    return switchRequest;
+  }
+
+  instance = {
+      getMaxIndex: getMaxIndex
+  };
+
+  setup();
+
+  return instance;
+}
+
+BitrateRuleClass.__dashjs_factory_name = 'BitrateRule';
+BitrateRule = dashjs.FactoryMaker.getClassFactory(BitrateRuleClass);

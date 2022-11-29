@@ -49,12 +49,12 @@ function BitrateRuleClass() {
 
   // This function gets called every time a segment is downloaded. Design your bitrate algorithm around that principle.
   function getMaxIndex(rulesContext) {
-    // Constants. TOOD: Should probably be based on settings
-    const bufferUpperLimit = 10000;
-    const bufferLowerLimit = 4000;
-    
+    // Constants. TODO: Should probably be based on settings
+    const bufferLimit = 4000;
+
     // Fetch metrics
     const mediaType = rulesContext.getMediaType();
+    const mediaInfo = rulesContext.getMediaInfo();
     const metrics = MetricsModel.getMetricsFor(mediaType, true);
 
     // Get current bitrate
@@ -67,17 +67,18 @@ function BitrateRuleClass() {
 
     // Get throughput history
     const streamInfo = rulesContext.getStreamInfo();
+    const streamId = streamInfo ? streamInfo.id : null;
     const isDynamic = streamInfo && streamInfo.manifestInfo ? streamInfo.manifestInfo.isDynamic : null;
     const throughputHistory = abrController.getThroughputHistory();
-    const throughputKbps = throughputHistory.getSafeAverageThroughput(mediaType, isDynamic);
+    const throughputKbps = throughputHistory.getSafeAverageThroughput(mediaType, isDynamic)
     const throughput = throughputKbps * 1000;
-
+    const latency = throughputHistory.getAverageLatency(mediaType) / 1000;
     // Return the index of the highest bitrate that is still lower than the throughput
     // Useful when minimizing the number of switches
     function indexOfBestBitrate() {
       let bestIndex = -1;
       bitrateList.every(bitrate =>  {
-        if (bitrate.bandwidth > throughput) {
+        if (bitrate.bandwidth >= throughput) {
           return false;
         }
         bestIndex += 1;
@@ -85,7 +86,12 @@ function BitrateRuleClass() {
       })
       return Math.max(0, bestIndex);
     }
-
+    // console.log('latency:', latency)
+    // console.log('currentBitrate:', currentBitrate / 1000000)
+    // console.log('throughput:', throughput / 1000000)
+    // console.log('bitrate/latency', currentBitrate / latency / 1000000)
+    // console.log(metrics)
+    // console.log(throughputHistory)
     // Get buffer level from the timestamp of the last chunk
     let bufferLevel = 0;
     if (metrics['BufferLevel'].length > 0) {
@@ -94,19 +100,17 @@ function BitrateRuleClass() {
 
     let newQuality = currentQuality;
     let switchReason = "";
-    if (bufferLevel < bufferLowerLimit) {
+    // const throughputIncreased = (throughput + currentBitrate) / (2 * currentBitrate) > 1.5;
+    // const throughputDecreased = (throughput + currentBitrate) / (2 * throughput) > 1.2;
+    // const throughputChanged = throughputIncreased || throughputDecreased;
+
+    if (bufferLevel < bufferLimit || metrics['BufferLevel'].length < 30) {
       newQuality = 0;
       switchReason = "Buffer low";
-    } else if (bufferLevel >= bufferUpperLimit || throughput > currentBitrate) {
+    } else {
       newQuality = indexOfBestBitrate();
       switchReason = "Buffer high";
     }
-
-    console.log('bufferLevel', bufferLevel)
-    console.log('thoughput', throughput);
-    // console.log('currentBitrate', currentBitrate);
-    console.log(metrics);
-
     // If quality matches current bitrate, don't do anything
     if (currentQuality == newQuality) {
       console.log('Do nothing!');
@@ -131,7 +135,6 @@ function BitrateRuleClass() {
 
   return instance;
 }
-
+ 
 BitrateRuleClass.__dashjs_factory_name = 'BitrateRule';
 BitrateRule = dashjs.FactoryMaker.getClassFactory(BitrateRuleClass);
-

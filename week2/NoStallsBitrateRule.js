@@ -59,7 +59,7 @@ function BitrateRuleClass() {
     const streamController = StreamController(context).getInstance();
     const abrController = rulesContext.getAbrController();
     const currentQuality = abrController.getQualityFor(mediaType, streamController.getActiveStreamInfo().id);
-    const currentBitrate = rulesContext.getMediaInfo()['bitrateList'][currentQuality];
+    const currentBitrate = rulesContext.getMediaInfo()['bitrateList'][currentQuality].bandwidth;
     const maxQuality = rulesContext.getMediaInfo()['bitrateList'].length - 1
 
     // Get throughput history
@@ -76,7 +76,7 @@ function BitrateRuleClass() {
       bufferLevel = metrics['BufferLevel'][metrics['BufferLevel'].length - 1]['level'];
     }
 
-    let newQuality = 0;
+    let newQuality = currentQuality;
     let switchReason = "";
     if (bufferLevel >= bufferLimit) {
       newQuality = Math.min(maxQuality, currentQuality + 1);
