@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <title>Janus WebRTC Server: Admin/Monitor</title>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+    <script type="text/javascript"
+        src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.4.1/js/bootstrap.min.js"></script>
+    <script type="text/javascript"
+        src="https://cdnjs.cloudflare.com/ajax/libs/bootbox.js/5.4.0/bootbox.min.js"></script>
+
+    <script type="text/javascript"
+        src="https://cdnjs.cloudflare.com/ajax/libs/webrtc-adapter/6.4.0/adapter.min.js"></script>
+    <script type="text/javascript"
+        src="https://cdnjs.cloudflare.com/ajax/libs/jquery.blockUI/2.70/jquery.blockUI.min.js"></script>
+    <script type="text/javascript"
+        src="https://cdnjs.cloudflare.com/ajax/libs/bootbox.js/5.4.0/bootbox.min.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/spin.js/2.3.2/spin.min.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/2.1.4/toastr.min.js"></script>
+    <script type="text/javascript" src="/static/janus.js"></script>
+    <script type="text/javascript" src="/static/videoroomtest.js"></script>
+
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/2.1.4/toastr.min.js"></script>
+
+
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootswatch/3.4.0/cerulean/bootstrap.min.css"
+        type="text/css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css"
+        type="text/css" />
+</head>
+
+<body>
+    <div class="container">
+
+        <!-- Streamer -->
+        <div class="row">
+            <div class="col-md-12">
+                <div class="page-header">
+                    <h1>Streamer </h1>
+
+                    <div class="container">
+                        <h2>Controls</h2>
+                        <ul id="actions"></ul>
+
+                        <div class="btn-group" role="group" aria-label="Basic example">
+                            <button type="button" class="btn btn-primary btn-xl" onclick="fwRTP();">Forward
+                                RTP</button>
+                            <button type="button" class="btn btn-primary btn-xl" onclick="startFFmpeg();">Start
+                                FFmpeg</button>
+                            <a href="http://localhost:8080/players/hls.html" target="_blank" rel="noopener noreferrer">
+                                <button type="button" class="btn btn-primary btn-xl">Play HLS</button>
+                            </a>
+                        </div>
+                    </div>
+
+                </div>
+                <div class="container" id="videojoin">
+                    <div class="row">
+                        <span class="label label-info" id="you"></span>
+                        <div class="col-md-12" id="controls">
+                            <div class="input-group margin-bottom-md hide" id="registernow">
+                                <span class="input-group-addon">@</span>
+                                <input autocomplete="off" class="form-control" type="text"
+                                    placeholder="Choose a display name" id="username"
+                                    onload="return checkEnter(this, event);" />
+                                <span class="input-group-btn">
+                                    <button class="btn btn-success" autocomplete="off" id="register">Join the
+                                        room</button>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="container" id="videos">
+
+                    <div class="panel panel-default">
+                        <div class="panel-heading">
+                            <h3 class="panel-title">Local Video <span class="label label-primary hide"
+                                    id="publisher"></span>
+                                <div class="btn-group btn-group-xs pull-right hide">
+                                    <div class="btn-group btn-group-xs">
+                                        <button id="bitrateset" autocomplete="off"
+                                            class="btn btn-primary dropdown-toggle" data-toggle="dropdown">
+                                            Bandwidth<span class="caret"></span>
+                                        </button>
+                                        <ul id="bitrate" class="dropdown-menu" role="menu">
+                                            <li><a href="#" id="0">No limit</a></li>
+                                            <li><a href="#" id="128">Cap to 128kbit</a></li>
+                                            <li><a href="#" id="256">Cap to 256kbit</a></li>
+                                            <li><a href="#" id="512">Cap to 512kbit</a></li>
+                                            <li><a href="#" id="1024">Cap to 1mbit</a></li>
+                                            <li><a href="#" id="1500">Cap to 1.5mbit</a></li>
+                                            <li><a href="#" id="2000">Cap to 2mbit</a></li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </h3>
+                        </div>
+                        <div class="panel-body" id="videolocal"></div>
+
+
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <script>
+        function addCompletedAction(text) {
+            var ul = document.getElementById("actions");
+            var li = document.createElement("li");
+            li.appendChild(document.createTextNode(text));
+            ul.appendChild(li);
+        }
+        function startFFmpeg() {
+            addCompletedAction("FFmpeg started");
+            var xhr = new XMLHttpRequest();
+            var url = "http://localhost:4001/ffmpeg/";
+            xhr.open("POST", url, true);
+            xhr.setRequestHeader("Content-Type", "application/json");
+            xhr.onreadystatechange = function () {
+                if (xhr.readyState === 4 && xhr.status === 200) {
+                    var json = JSON.parse(xhr.responseText);
+                    console.log(json);
+                } else {
+		    console.log(xhr.responseText);
+		}
+            };
+            var data = JSON.stringify({
+                "args":
+                    [
+                        "-analyzeduration",
+                        "10M",
+                        "-probesize",
+                        "10M",
+                        "-protocol_whitelist",
+                        "file,udp,rtp",
+                        "-thread_queue_size",
+                        "1024",
+                        "-i",
+                        "/server/source.sdp",
+                        "-c:v",
+                        "libx264",
+                        "-an"
+                    ],
+		"force_unique_key": true
+            });
+            xhr.send(data);
+        }
+
+        function fwRTP() {
+            addCompletedAction("RTP Forwarded")
+            var rtpforwarding = {
+                request: "rtp_forward",
+                room: myroom,
+                publisher_id: myid,
+                host: "127.0.0.1",
+                audio_port: 7500,
+                video_port: 7000,
+                secret: 'adminpwd'
+            }
+
+            sfutest.send({
+                message: rtpforwarding,
+                success: function (result) {
+                    console.log("RTP Forwarding started");
+                    console.log(result);
+                    // startFFmpeg();
+                }
+            });
+
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            document.querySelector('#username').value = 'test';
+            document.querySelector('#register').click();
+            console.log('Loaded')
+
+        });
+    </script>
+
+
+</body>
+
+</html>

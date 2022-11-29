@@ -1,0 +1,4 @@
+Flask==2.1.1
+Flask-Executor==1.0.0
+Flask-Shell2HTTP==1.9.1
+Flask-Cors==3.0.10

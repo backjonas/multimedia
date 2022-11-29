@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <title>Janus WebRTC Server: Admin/Monitor</title>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+    <script type="text/javascript"
+        src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.4.1/js/bootstrap.min.js"></script>
+    <script type="text/javascript"
+        src="https://cdnjs.cloudflare.com/ajax/libs/bootbox.js/5.4.0/bootbox.min.js"></script>
+
+    <script type="text/javascript"
+        src="https://cdnjs.cloudflare.com/ajax/libs/webrtc-adapter/6.4.0/adapter.min.js"></script>
+    <script type="text/javascript"
+        src="https://cdnjs.cloudflare.com/ajax/libs/jquery.blockUI/2.70/jquery.blockUI.min.js"></script>
+    <script type="text/javascript"
+        src="https://cdnjs.cloudflare.com/ajax/libs/bootbox.js/5.4.0/bootbox.min.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/spin.js/2.3.2/spin.min.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/2.1.4/toastr.min.js"></script>
+    <script type="text/javascript" src="/static/janus.js"></script>
+    <script type="text/javascript" src="/static/videoroomClient.js"></script>
+
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/2.1.4/toastr.min.js"></script>
+
+
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootswatch/3.4.0/cerulean/bootstrap.min.css"
+        type="text/css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css"
+        type="text/css" />
+</head>
+
+<body>
+    <div class="container">
+
+        <div class="row">
+            <div class="col-md-12">
+                <div class="page-header">
+                    <h1>Client</h1>
+                </div>
+
+                <div class="container" id="videojoin">
+                    <div class="row">
+                        <span class="label label-info" id="you"></span>
+                        <div class="col-md-12" id="controls">
+                            <div class="input-group margin-bottom-md hide" id="registernow">
+                                <span class="input-group-addon">@</span>
+                                <input autocomplete="off" class="form-control" type="text"
+                                    placeholder="Choose a display name" id="username"
+                                    onload="return checkEnter(this, event);" />
+                                <span class="input-group-btn">
+                                    <button class="btn btn-success" autocomplete="off" id="register">Join the
+                                        room</button>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="container" id="videos">
+                    <div class="panel panel-default">
+                        <div class="panel-heading">
+                            <h3 class="panel-title">Remote Video #1 <span class="label label-info hide"
+                                    id="remote1"></span>
+                            </h3>
+                        </div>
+                        <div class="panel-body relative" id="videoremote1"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+    </div>
+
+
+    <script>
+
+        document.addEventListener('DOMContentLoaded', function () {
+            document.querySelector('#username').value = 'test';
+            document.querySelector('#register').click();
+            console.log('Loaded')
+
+        });
+    </script>
+
+
+</body>
+
+</html>
