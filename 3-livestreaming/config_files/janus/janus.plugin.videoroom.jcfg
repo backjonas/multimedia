@@ -60,10 +60,11 @@ room-1234: {
 	description = "Demo Room"
 	secret = "adminpwd"
 	publishers = 6
-	bitrate = 128000
+	bitrate = 1000000
 	fir_freq = 2
 	#audiocodec = "opus"
-	#videocodec = "vp8"
+	videocodec = "H264"
+	h264_profile = "42e01f"
 	record = false
 	#rec_dir = "/path/to/recordings-folder"
 }
